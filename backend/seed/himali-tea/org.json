@@ -1,0 +1,67 @@
+{
+  "slug": "himali-tea",
+  "name": "Himali Tea House",
+  "timezone": "Asia/Kathmandu",
+  "products": [
+    {"sku": "HT-001", "name": "Himalayan Black Tea", "category": "black tea", "price": "650", "stock": 24},
+    {"sku": "HT-002", "name": "Ilam Golden Tips", "category": "black tea", "price": "1200", "stock": 10},
+    {"sku": "HT-003", "name": "Jun Chiyabari Green", "category": "green tea", "price": "900", "stock": 18},
+    {"sku": "HT-004", "name": "Jasmine Green Tea", "category": "green tea", "price": "750", "stock": 20},
+    {"sku": "HT-005", "name": "Silver Needle", "category": "white tea", "price": "1500", "stock": 8},
+    {"sku": "HT-006", "name": "Himalayan Oolong", "category": "oolong", "price": "1100", "stock": 12},
+    {"sku": "HT-007", "name": "Masala Chiya Blend", "category": "spiced tea", "price": "500", "stock": 30},
+    {"sku": "HT-008", "name": "Tulsi Herbal Infusion", "category": "herbal", "price": "450", "stock": 22},
+    {"sku": "HT-009", "name": "Chamomile Flowers", "category": "herbal", "price": "550", "stock": 16},
+    {"sku": "HT-010", "name": "Lemongrass Ginger", "category": "herbal", "price": "500", "stock": 25},
+    {"sku": "HT-011", "name": "Rose Black Tea", "category": "black tea", "price": "700", "stock": 14},
+    {"sku": "HT-012", "name": "Mint Green Tea", "category": "green tea", "price": "600", "stock": 19},
+    {"sku": "HT-013", "name": "First Flush Darjeeling", "category": "black tea", "price": "1300", "stock": 9},
+    {"sku": "HT-014", "name": "Smoked Himalayan Tea", "category": "black tea", "price": "850", "stock": 0},
+    {"sku": "TW-001", "name": "Glass Tea Pot", "category": "teaware", "price": "1800", "stock": 7},
+    {"sku": "TW-002", "name": "Clay Tea Pot", "category": "teaware", "price": "2200", "stock": 2},
+    {"sku": "TW-003", "name": "Bamboo Tea Strainer", "category": "teaware", "price": "350", "stock": 28},
+    {"sku": "TW-004", "name": "Ceramic Tasting Cup", "category": "teaware", "price": "400", "stock": 32},
+    {"sku": "TW-005", "name": "Tea Storage Tin", "category": "teaware", "price": "300", "stock": 40},
+    {"sku": "TW-006", "name": "Digital Brew Scale", "category": "teaware", "price": "2500", "stock": 6}
+  ],
+  "customers": [
+    {
+      "email": "priya.himali@example.com",
+      "role": "customer",
+      "orders": [
+        {
+          "days_ago": 21,
+          "status": "delivered",
+          "delivery_address": "Jhamsikhel, Lalitpur",
+          "items": [{"sku": "HT-002", "quantity": 2}, {"sku": "TW-003", "quantity": 1}]
+        },
+        {
+          "days_ago": 3,
+          "status": "shipped",
+          "delivery_address": "Jhamsikhel, Lalitpur",
+          "items": [{"sku": "HT-005", "quantity": 1}, {"sku": "TW-004", "quantity": 2}]
+        }
+      ]
+    },
+    {
+      "email": "bikash.himali@example.com",
+      "role": "customer",
+      "orders": [
+        {
+          "days_ago": 30,
+          "status": "delivered",
+          "delivery_address": "Lakeside, Pokhara",
+          "items": [{"sku": "HT-007", "quantity": 3}, {"sku": "HT-014", "quantity": 1}, {"sku": "TW-002", "quantity": 1}]
+        },
+        {
+          "days_ago": 0,
+          "status": "pending",
+          "delivery_address": "Lakeside, Pokhara",
+          "items": [{"sku": "HT-001", "quantity": 2}]
+        }
+      ]
+    },
+    {"email": "sanjay.himali@example.com", "role": "customer", "orders": []},
+    {"email": "admin.himali@example.com", "role": "admin", "orders": []}
+  ]
+}

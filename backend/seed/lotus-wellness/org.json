@@ -1,0 +1,57 @@
+{
+  "slug": "lotus-wellness",
+  "name": "Lotus Wellness Studio",
+  "timezone": "Asia/Kathmandu",
+  "services": [
+    {"code": "swedish-60", "name": "Swedish Relaxation Massage", "category": "massage", "duration_minutes": 60, "price": "3500"},
+    {"code": "deep-tissue-60", "name": "Deep Tissue Massage", "category": "massage", "duration_minutes": 60, "price": "4200"},
+    {"code": "hot-stone-90", "name": "Himalayan Hot Stone Massage", "category": "massage", "duration_minutes": 90, "price": "5800"},
+    {"code": "physio-assessment-45", "name": "Physiotherapy Assessment", "category": "physiotherapy", "duration_minutes": 45, "price": "3000"},
+    {"code": "physio-followup-30", "name": "Physiotherapy Follow-up", "category": "physiotherapy", "duration_minutes": 30, "price": "2000"},
+    {"code": "sports-rehab-60", "name": "Sports Injury Rehab", "category": "physiotherapy", "duration_minutes": 60, "price": "3800"},
+    {"code": "private-yoga-60", "name": "Private Yoga Session", "category": "yoga", "duration_minutes": 60, "price": "2500"},
+    {"code": "yoga-back-care-75", "name": "Yoga for Back Care", "category": "yoga", "duration_minutes": 75, "price": "3200"}
+  ],
+  "practitioners": [
+    {"code": "sita-gurung", "name": "Sita Gurung", "services": ["swedish-60", "deep-tissue-60", "hot-stone-90"]},
+    {"code": "arjun-thapa", "name": "Dr. Arjun Thapa", "services": ["physio-assessment-45", "physio-followup-30", "sports-rehab-60", "deep-tissue-60"]},
+    {"code": "maya-rai", "name": "Maya Rai", "services": ["private-yoga-60", "yoga-back-care-75", "swedish-60"]}
+  ],
+  "opening_hours": [
+    {"weekday": "sunday", "opens_at": "07:00", "closes_at": "19:00"},
+    {"weekday": "monday", "opens_at": "07:00", "closes_at": "19:00"},
+    {"weekday": "tuesday", "opens_at": "07:00", "closes_at": "19:00"},
+    {"weekday": "wednesday", "opens_at": "07:00", "closes_at": "19:00"},
+    {"weekday": "thursday", "opens_at": "07:00", "closes_at": "19:00"},
+    {"weekday": "friday", "opens_at": "07:00", "closes_at": "17:00"},
+    {"weekday": "saturday", "opens_at": "09:00", "closes_at": "13:00"}
+  ],
+  "holidays": [
+    {"day": "2026-11-09", "name": "Tihar closure"},
+    {"day": "2026-11-10", "name": "Tihar closure"},
+    {"day": "2026-11-11", "name": "Tihar closure"},
+    {"day": "2026-12-25", "name": "Christmas Day"},
+    {"day": "2027-01-01", "name": "New Year's Day"}
+  ],
+  "customers": [
+    {
+      "email": "anita.lotus@example.com",
+      "role": "customer",
+      "bookings": [
+        {"weeks_from_now": -2, "weekday": "tuesday", "time": "10:00", "service": "deep-tissue-60", "practitioner": "sita-gurung", "status": "completed"},
+        {"weeks_from_now": 1, "weekday": "wednesday", "time": "16:00", "service": "swedish-60", "practitioner": "sita-gurung", "status": "confirmed"}
+      ]
+    },
+    {
+      "email": "rohan.lotus@example.com",
+      "role": "customer",
+      "bookings": [
+        {"weeks_from_now": -3, "weekday": "monday", "time": "08:00", "service": "physio-assessment-45", "practitioner": "arjun-thapa", "status": "completed"},
+        {"weeks_from_now": -1, "weekday": "monday", "time": "08:00", "service": "physio-followup-30", "practitioner": "arjun-thapa", "status": "cancelled"},
+        {"weeks_from_now": 1, "weekday": "thursday", "time": "11:00", "service": "sports-rehab-60", "practitioner": "arjun-thapa", "status": "confirmed"}
+      ]
+    },
+    {"email": "kiran.lotus@example.com", "role": "customer", "bookings": []},
+    {"email": "admin.lotus@example.com", "role": "admin", "bookings": []}
+  ]
+}
