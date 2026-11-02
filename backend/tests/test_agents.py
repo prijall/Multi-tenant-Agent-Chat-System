@@ -123,3 +123,50 @@ async def test_agent_uses_live_tenant_product_data(session):
     assert answer.content == "First Flush is in stock."
     assert audit.output_data["products"][0]["sku"] == "TEA-1"
     assert audit.output_data["products"][0]["stock"] == 8
+
+
+async def test_product_search_offers_real_in_stock_products_from_the_same_category(session):
+    context, conversation = await agent_context(session, "himali-tea")
+    session.add_all(
+        [
+            Product(
+                org_id=context.org_id,
+                sku="POT-1",
+                name="Clay Pot",
+                category="teaware",
+                price=2200,
+                stock=2,
+            ),
+            Product(
+                org_id=context.org_id,
+                sku="POT-2",
+                name="Glass Pot",
+                category="teaware",
+                price=1800,
+                stock=7,
+            ),
+            Product(
+                org_id=context.org_id,
+                sku="POT-3",
+                name="Sold Out Pot",
+                category="teaware",
+                price=900,
+                stock=0,
+            ),
+            Product(
+                org_id=context.org_id,
+                sku="TEA-1",
+                name="Green Tea",
+                category="tea",
+                price=500,
+                stock=9,
+            ),
+        ]
+    )
+    await session.commit()
+    _, registry = await registry_for(session, context)
+
+    output, _ = await registry.execute("search_products", {"query": "Clay"})
+
+    assert [row["sku"] for row in output["products"]] == ["POT-1"]
+    assert [row["sku"] for row in output["similar_in_stock"]] == ["POT-2"]

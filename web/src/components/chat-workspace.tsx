@@ -18,6 +18,7 @@ import {
   fetchMessages,
   fetchSuggestion,
   removeConversation,
+  renameConversation,
   resolveAction,
   streamChatMessage,
 } from "@/lib/api";
@@ -90,6 +91,7 @@ function Citations({ citations }: { citations: Citation[] }) {
 
 export function ChatWorkspace({ tenant }: { tenant: Tenant }) {
   const [suggestion, setSuggestion] = useState("");
+  const [renaming, setRenaming] = useState({ id: "", title: "" });
   const composer = useRef<HTMLTextAreaElement>(null);
   const [streaming, setStreaming] = useState(false);
   const [streamingText, setStreamingText] = useState("");
@@ -297,6 +299,25 @@ export function ChatWorkspace({ tenant }: { tenant: Tenant }) {
     composer.current?.focus();
   }
 
+  async function saveRename() {
+    const { id, title } = renaming;
+    setRenaming({ id: "", title: "" });
+    const current = conversations.find((conversation) => conversation.id === id);
+    const next = title.trim();
+    if (!current || !next || next === current.title) return;
+    try {
+      const updated = await renameConversation(id, next.slice(0, 160));
+      setConversations((rows) => rows.map((row) => (row.id === id ? updated : row)));
+    } catch (reason) {
+      setError(reason instanceof Error ? reason.message : "Could not rename the chat");
+    }
+  }
+
+  function renameKeyDown(event: KeyboardEvent<HTMLInputElement>) {
+    if (event.key === "Enter") void saveRename();
+    if (event.key === "Escape") setRenaming({ id: "", title: "" });
+  }
+
   async function remove(id: string) {
     try {
       await removeConversation(id);
@@ -317,7 +338,10 @@ export function ChatWorkspace({ tenant }: { tenant: Tenant }) {
         <div className="conversation-list">
           {conversations.map((conversation) => (
             <div className={conversation.id === activeId ? "conversation active" : "conversation"} key={conversation.id}>
-              <button disabled={busy} onClick={() => { void selectConversation(conversation.id); setSidebarOpen(false); }}>{conversation.title}</button>
+              {renaming.id === conversation.id
+                ? <input aria-label="Chat name" autoFocus maxLength={160} onBlur={() => void saveRename()} onChange={(event) => setRenaming({ id: conversation.id, title: event.target.value })} onKeyDown={renameKeyDown} value={renaming.title} />
+                : <button disabled={busy} onClick={() => { void selectConversation(conversation.id); setSidebarOpen(false); }}>{conversation.title}</button>}
+              <button aria-label={`Rename ${conversation.title}`} disabled={busy} onClick={() => setRenaming({ id: conversation.id, title: conversation.title })}>✎</button>
               <button aria-label={`Delete ${conversation.title}`} disabled={busy} onClick={() => remove(conversation.id)}>×</button>
             </div>
           ))}

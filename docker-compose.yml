@@ -1,0 +1,50 @@
+services:
+  api:
+    build: ./backend
+    ports:
+      - "8000:8000"
+    env_file:
+      - path: backend/.env
+        required: false
+      - path: backend/.env.local
+        required: false
+    environment:
+      REDIS_URL: redis://redis:6379/0
+    depends_on:
+      redis:
+        condition: service_healthy
+    restart: unless-stopped
+
+  web:
+    build:
+      context: ./web
+      args:
+        NEXT_PUBLIC_API_URL: http://localhost:8000
+    ports:
+      - "3000:3000"
+    env_file:
+      - path: web/.env.local
+        required: false
+    depends_on:
+      api:
+        condition: service_healthy
+    restart: unless-stopped
+
+  redis:
+    # Redis Stack rather than plain Redis, because the answer cache needs vector search.
+    image: redis/redis-stack:7.4.0-v3
+    # On this machine only, as Redis has no password here. 8001 is the Redis Insight browser UI.
+    ports:
+      - "127.0.0.1:6379:6379"
+      - "127.0.0.1:8001:8001"
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+    volumes:
+      - redis_data:/data
+    restart: unless-stopped
+
+volumes:
+  redis_data:

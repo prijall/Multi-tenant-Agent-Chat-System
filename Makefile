@@ -1,8 +1,13 @@
-.PHONY: install api web test lint migrate seed eval
+.PHONY: setup install dev api web test lint migrate seed eval
+
+setup: install migrate
 
 install:
 	cd backend && uv sync
 	cd web && npm install
+
+dev:
+	$(MAKE) -j2 api web
 
 api:
 	cd backend && uv run uvicorn app.main:app --reload --port 8000
@@ -15,6 +20,7 @@ test:
 
 lint:
 	cd backend && uv run ruff check .
+	cd web && npm run lint
 
 migrate:
 	cd backend && uv run python -m app.scripts.bootstrap_database

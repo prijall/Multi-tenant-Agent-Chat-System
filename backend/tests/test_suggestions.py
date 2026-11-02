@@ -7,6 +7,7 @@ from httpx import ASGITransport, AsyncClient
 
 from app.agents.contracts import ProviderTurn
 from app.agents.suggestions import suggest_next_message
+from app.api.conversations import get_suggestion_provider
 from app.core.security import authenticated_subject
 from app.db.database import get_session
 from app.db.models import (
@@ -18,7 +19,7 @@ from app.db.models import (
     PendingActionStatus,
     User,
 )
-from app.main import app, get_suggestion_provider
+from app.main import app
 
 
 @dataclass
@@ -178,7 +179,7 @@ async def test_endpoint_is_rate_limited_separately_from_chat(chat, client, monke
     app.dependency_overrides[get_suggestion_provider] = lambda: Fake()
     from app.core.rate_limit import SlidingWindowLimiter
 
-    monkeypatch.setattr("app.main.suggestion_limiter", SlidingWindowLimiter(maximum=1))
+    monkeypatch.setattr("app.api.conversations.suggestion_limiter", SlidingWindowLimiter(maximum=1))
 
     path = f"/api/conversations/{conversation.id}/suggestion"
     first = await client.post(path)

@@ -11,6 +11,7 @@ from sqlalchemy.ext.asyncio import async_sessionmaker
 from app.agents.contracts import AgentEvent, ProviderTurn, ToolCall
 from app.agents.gemini import GeminiProvider
 from app.agents.runtime import stream_agent
+from app.api.conversations import get_agent_provider
 from app.core.security import RequestContext, authenticated_subject
 from app.db.database import get_session, get_session_factory
 from app.db.models import (
@@ -26,7 +27,7 @@ from app.db.models import (
     User,
     UserRole,
 )
-from app.main import app, get_agent_provider
+from app.main import app
 
 ANSWER = ProviderTurn(parts=[{"text": "Hello there"}], text="Hello there")
 
@@ -131,6 +132,22 @@ async def test_the_last_round_forces_an_answer(session, shop):
     assert events[-1]["type"] == "done"
     assert provider.offered_tools[0] > 0
     assert provider.offered_tools[-1] == 0
+
+
+async def test_a_model_that_keeps_calling_tools_still_gets_a_reply(session, shop):
+    context, conversation, *_ = shop
+    provider = StreamingFake(
+        [
+            [tool_turn("search_products", {"query": "a"})],
+            [tool_turn("search_products", {"query": "b"})],
+        ]
+    )
+
+    events = await collect(session, context, conversation, provider, max_tool_rounds=1)
+
+    assert events[-1]["type"] == "done"
+    assert "couldn't finish" in events[-1]["message"].content
+    assert provider.calls == []
 
 
 async def test_stopping_keeps_the_question_and_the_partial_reply(session, shop):

@@ -21,6 +21,7 @@ from app.db.models import (
     Booking,
     BookingStatus,
     Conversation,
+    Holiday,
     OpeningHours,
     Organization,
     PendingAction,
@@ -153,6 +154,29 @@ async def test_finding_slots_adds_a_pickable_card(session, studio):
     assert card["slots"][0]["practitioner"] == "Maya"
     assert card["slots"][0]["label"].endswith("08:00")
     assert len(card["slots"]) <= 12
+
+
+async def test_empty_slots_on_a_holiday_say_why(session, studio):
+    day = local_time(3, 8).date()
+    session.add(Holiday(org_id=studio.context.org_id, day=day, name="Tihar closure"))
+    await session.commit()
+    seen: list[dict] = []
+
+    class Recording(Scripted):
+        async def complete(self, *, system_prompt, events, tools):
+            seen.append(events[-1].parts[0])
+            return await super().complete(system_prompt=system_prompt, events=events, tools=tools)
+
+    answer = await run_agent(
+        session,
+        studio.context,
+        studio.conversation,
+        "Free times?",
+        Recording([find_slots_turn(studio, day), ANSWER]),
+    )
+
+    assert answer.cards == []
+    assert "Tihar closure" in seen[-1]["functionResponse"]["response"]["note"]
 
 
 async def test_cards_stay_out_of_what_the_model_and_audit_see(session, studio):

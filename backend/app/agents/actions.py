@@ -52,6 +52,11 @@ from app.services.orders import (
 )
 
 ACTION_LIFETIME = timedelta(minutes=15)
+# From the shipping policy (seed/himali-tea/kb/shipping.md). Collected with cash on delivery.
+DELIVERY_NOTE = (
+    "Total excludes delivery: Rs 150 inside the Kathmandu valley, Rs 300 outside it, "
+    "and free on orders of Rs 3,000 or more."
+)
 MAX_ITEMS = 50
 MAX_QUANTITY = 100
 
@@ -163,7 +168,7 @@ async def propose_order(
             "title": "Confirm your order",
             "lines": [*_order_lines(lines), {"label": "Deliver to", "value": address}],
             "total": f"Rs {total}",
-            "note": "Payment is cash on delivery.",
+            "note": f"Payment is cash on delivery. {DELIVERY_NOTE}",
         },
     )
 
@@ -201,7 +206,7 @@ async def propose_order_update(
             "title": "Confirm the changes to your order",
             "lines": [*_order_lines(lines), {"label": "Deliver to", "value": address}],
             "total": f"Rs {total}",
-            "note": f"The order total was Rs {detail['total']}.",
+            "note": f"The order total was Rs {detail['total']}. {DELIVERY_NOTE}",
         },
     )
 
@@ -275,7 +280,10 @@ async def propose_reorder(
                 {"label": "Deliver to", "value": detail["delivery_address"]},
             ],
             "total": f"Rs {total}",
-            "note": "; ".join(changes) if changes else "Prices are unchanged since last time.",
+            "note": (
+                f"{'; '.join(changes) if changes else 'Prices are unchanged since last time'}. "
+                f"{DELIVERY_NOTE}"
+            ),
         },
     )
     return {**result, "price_changes": changes}

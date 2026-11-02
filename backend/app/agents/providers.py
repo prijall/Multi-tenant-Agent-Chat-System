@@ -89,7 +89,7 @@ def _single_provider(name: str | None, api_key: str | None, model: str | None):
     return provider_class(api_key, model or default_model)
 
 
-def _primary(settings: Settings) -> AgentProvider | None:
+def build_primary_provider(settings: Settings) -> AgentProvider | None:
     return _single_provider(settings.llm_provider, settings.llm_api_key, settings.llm_model)
 
 
@@ -103,12 +103,12 @@ def _fallback(settings: Settings) -> AgentProvider | None:
 
 def build_suggestion_provider(settings: Settings) -> AgentProvider | None:
     """Suggestions run on the fallback when there is one, keeping the main quota for chat."""
-    return _fallback(settings) or _primary(settings)
+    return _fallback(settings) or build_primary_provider(settings)
 
 
 def build_provider(settings: Settings) -> AgentProvider | None:
     """The LLM is chosen by environment variables alone; None means it isn't configured."""
-    primary = _primary(settings)
+    primary = build_primary_provider(settings)
     fallback = _fallback(settings)
     if primary is None or fallback is None:
         return primary or fallback

@@ -15,6 +15,7 @@ import httpx
 from sqlalchemy import delete, select, text
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from app.agents.answer_cache import get_answer_cache
 from app.core.config import get_settings
 from app.db.database import SessionFactory
 from app.db.models import (
@@ -303,6 +304,9 @@ async def seed_organization(session: AsyncSession, directory: Path) -> str:
     await session.flush()
     await seed_customers(session, org, data.get("customers", []))
     chunks = await rebuild_org_knowledge(session, org, directory / "kb")
+    # New documents make yesterday's answers stale.
+    if cache := get_answer_cache():
+        await cache.purge(org.id)
     await seed_demo_logins(session, org, data.get("customers", []))
     return (
         f"{org.name}: {len(data.get('products', []))} products, "

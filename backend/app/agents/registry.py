@@ -20,6 +20,8 @@ from app.services.knowledge import search_knowledge
 from app.services.orders import order_detail
 
 RECENT_ORDERS = 10
+MAX_ROWS_WITH_SIMILAR = 3
+MAX_SIMILAR_PRODUCTS = 3
 
 ORDER_ID = {"type": "string", "description": "The order's id, from list_my_orders"}
 BOOKING_ID = {"type": "string", "description": "The booking's id, from list_my_bookings"}
@@ -65,6 +67,16 @@ def _json(value: Any) -> Any:
     if isinstance(value, list):
         return [_json(item) for item in value]
     return value
+
+
+def _product(row: Product) -> dict[str, Any]:
+    return {
+        "sku": row.sku,
+        "name": row.name,
+        "category": row.category,
+        "price": str(row.price),
+        "stock": row.stock,
+    }
 
 
 def _local_times_only(rows: list[dict[str, Any]]) -> list[dict[str, Any]]:
@@ -154,19 +166,23 @@ async def registry_for(
                 statement = statement.where(Product.price >= Decimal(str(arguments["min_price"])))
             if arguments.get("max_price") is not None:
                 statement = statement.where(Product.price <= Decimal(str(arguments["max_price"])))
-            rows = await session.scalars(statement.order_by(Product.name).limit(25))
-            return {
-                "products": [
-                    {
-                        "sku": row.sku,
-                        "name": row.name,
-                        "category": row.category,
-                        "price": str(row.price),
-                        "stock": row.stock,
-                    }
-                    for row in rows
-                ]
-            }
+            rows = list(await session.scalars(statement.order_by(Product.name).limit(25)))
+            result: dict[str, Any] = {"products": [_product(row) for row in rows]}
+            # Real options from the database, so a short item never leaves the model to invent one.
+            if rows and len(rows) <= MAX_ROWS_WITH_SIMILAR:
+                similar = await session.scalars(
+                    select(Product)
+                    .where(
+                        Product.org_id == context.org_id,
+                        Product.category.in_({row.category for row in rows}),
+                        Product.id.not_in([row.id for row in rows]),
+                        Product.stock > 0,
+                    )
+                    .order_by(Product.stock.desc())
+                    .limit(MAX_SIMILAR_PRODUCTS)
+                )
+                result["similar_in_stock"] = [_product(row) for row in similar]
+            return result
 
         async def orders(_: dict[str, Any]) -> dict[str, Any]:
             rows: list[Order] = list(await list_customer_orders(session, context))
@@ -315,6 +331,20 @@ async def registry_for(
                 result["card"] = bookings_card(rows, timezone)
             return result
 
+        async def _why_no_slots(first_day: date, last_day: date) -> str:
+            """An empty list with no reason sends the model off searching again and again."""
+            closures = await session.scalars(
+                select(Holiday).where(
+                    Holiday.org_id == context.org_id,
+                    Holiday.day >= first_day,
+                    Holiday.day <= last_day,
+                )
+            )
+            names = [f"{row.day} ({row.name})" for row in closures]
+            if names:
+                return f"The studio is closed on: {', '.join(names)}. Tell the customer."
+            return "No free times in this range. Tell the customer and ask about another day."
+
         async def slots(arguments: dict[str, Any]) -> dict[str, Any]:
             service_id = uuid.UUID(str(arguments["service_id"]))
             booking_id = str(arguments.get("booking_id") or "") or None
@@ -332,6 +362,11 @@ async def registry_for(
             result: dict[str, Any] = {"slots": _local_times_only(rows)}
             if rows:
                 result["card"] = slots_card(rows, str(service_id), booking_id)
+            else:
+                result["note"] = await _why_no_slots(
+                    date.fromisoformat(str(arguments["date_from"])),
+                    date.fromisoformat(str(arguments["date_to"])),
+                )
             return result
 
         return slug, TenantToolRegistry(

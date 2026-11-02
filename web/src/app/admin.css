@@ -1,17 +1,123 @@
-.user-management{margin-top:48px;padding-top:36px;border-top:1px solid var(--line)}
-.admin-orders{margin-top:48px;padding-top:36px;border-top:1px solid var(--line)}
-.admin-orders h2{font-family:Georgia,serif;font-size:30px;margin:0 0 16px}
-.admin-orders .button{white-space:nowrap}
-.membership-help{max-width:480px;opacity:.65;line-height:1.5}
-.invite-form{display:grid;grid-template-columns:minmax(240px,1fr) 180px auto;gap:12px;align-items:end;margin:20px 0}
-.invite-form label{display:grid;gap:7px;font-size:13px;font-weight:700}
-.invite-form input,.invite-form select,.member-actions select{border:1px solid var(--line);border-radius:10px;padding:12px;background:white;font:inherit}
-.member-list{display:grid;gap:8px;margin-top:20px}
-.member-row{display:flex;justify-content:space-between;align-items:center;gap:16px;padding:14px 18px;background:var(--surface);border:1px solid var(--line);border-radius:14px}
-.member-row>div:first-child{display:flex;align-items:center;gap:10px}
-.status{padding:4px 8px;border-radius:999px;font-size:11px;font-weight:700;text-transform:uppercase;background:#eee}
-.status.active{background:#dcebdd;color:#285d32}
-.status.pending{background:#fff0cb;color:#785b0d}
-.member-actions{display:flex;align-items:center;gap:10px}
-.member-actions button{border:0;background:transparent;text-decoration:underline;cursor:pointer}
-@media(max-width:700px){.invite-form{grid-template-columns:1fr}.member-row{align-items:flex-start;flex-direction:column}.member-actions{width:100%;justify-content:space-between}}
+.user-management {
+  margin-top: 48px;
+  padding-top: 36px;
+  border-top: 1px solid var(--line);
+}
+
+.admin-orders {
+  margin-top: 48px;
+  padding-top: 36px;
+  border-top: 1px solid var(--line);
+}
+
+.admin-orders h2 {
+  font-family: Georgia,serif;
+  font-size: 30px;
+  margin: 0 0 16px;
+}
+
+.admin-orders .button {
+  white-space: nowrap;
+}
+
+.membership-help {
+  max-width: 480px;
+  opacity: .65;
+  line-height: 1.5;
+}
+
+.invite-form {
+  display: grid;
+  grid-template-columns: minmax(240px,1fr) 180px auto;
+  gap: 12px;
+  align-items: end;
+  margin: 20px 0;
+}
+
+.invite-form label {
+  display: grid;
+  gap: 7px;
+  font-size: 13px;
+  font-weight: 700;
+}
+
+.invite-form input,
+.invite-form select,
+.member-actions select {
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  padding: 12px;
+  background: white;
+  font: inherit;
+}
+
+.member-list {
+  display: grid;
+  gap: 8px;
+  margin-top: 20px;
+}
+
+.member-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 16px;
+  padding: 14px 18px;
+  background: var(--surface);
+  border: 1px solid var(--line);
+  border-radius: 14px;
+}
+
+.member-row>div:first-child {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.status {
+  padding: 4px 8px;
+  border-radius: 999px;
+  font-size: 11px;
+  font-weight: 700;
+  text-transform: uppercase;
+  background: #eee;
+}
+
+.status.active {
+  background: #dcebdd;
+  color: #285d32;
+}
+
+.status.pending {
+  background: #fff0cb;
+  color: #785b0d;
+}
+
+.member-actions {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.member-actions button {
+  border: 0;
+  background: transparent;
+  text-decoration: underline;
+  cursor: pointer;
+}
+
+@media (max-width: 700px) {
+  .invite-form {
+    grid-template-columns: 1fr;
+  }
+
+  .member-row {
+    align-items: flex-start;
+    flex-direction: column;
+  }
+
+  .member-actions {
+    width: 100%;
+    justify-content: space-between;
+  }
+}

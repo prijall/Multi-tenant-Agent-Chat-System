@@ -1,3 +1,4 @@
+import asyncio
 import logging
 import uuid
 from collections.abc import AsyncIterator
@@ -12,6 +13,7 @@ from fastapi import HTTPException
 from sqlalchemy import select, update
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from app.agents.answer_cache import AnswerCache, is_cacheable_question
 from app.agents.contracts import AgentEvent, AgentProvider, ProviderTurn
 from app.agents.registry import registry_for
 from app.core.security import RequestContext
@@ -23,8 +25,11 @@ from app.db.models import (
     PendingAction,
     ToolRun,
 )
+from app.services.knowledge import embed_query, search_knowledge
 
 logger = logging.getLogger(__name__)
+# Uvicorn's logger, so cache hits and misses show up in the server's normal output.
+events_log = logging.getLogger("uvicorn.error")
 
 SYSTEM_PROMPTS = {
     "himali-tea": """You are the customer agent for Himali Tea House.
@@ -34,8 +39,10 @@ All prices are in Nepalese rupees; write them as "Rs 500".
 Ask for a delivery address before calling create_order if you don't have one.
 Call search_products first to get the exact SKU. Never guess a SKU.
 A street or area name is a complete delivery address, so don't ask for more detail.
+Totals exclude delivery; the card explains the charge, and the shipping policy has the details.
 For "same as last time", find the newest order with list_my_orders, then call reorder.
-If an item is short, say so and offer the alternatives the tool returns.
+If an item is short, say how many are left and offer one from similar_in_stock by its exact name.
+Only ever name products a tool returned, and never call create_order for a quantity not asked for.
 Knowledge answers must cite the returned document and section.""",
     "lotus-wellness": """You are the customer agent for Lotus Wellness Studio.
 Use tools for policies, services, prices, hours, holidays, availability and bookings.
@@ -44,6 +51,8 @@ All prices are in Nepalese rupees; write them as "Rs 500".
 Never claim access to another organization.
 Get service ids from list_services and practitioner ids and times from find_available_slots.
 Show customers local times, never UTC. If a time conflicts, offer the nearest free slots returned.
+If the exact time asked for isn't free, say so and offer nearby times, then wait for their choice.
+Never call create_booking or reschedule_booking for a time the customer didn't ask for.
 Free times appear as buttons under your reply, so mention only a few and invite them to pick one.
 When looking for a new time for an existing booking, pass its booking_id to find_available_slots.
 Knowledge answers must cite the returned document and section.""",
@@ -56,6 +65,7 @@ When one returns awaiting_confirmation, give a one-line summary and ask them to 
 Never say something is placed, booked, moved or cancelled until they have confirmed it.
 A typed "yes" does not confirm; ask them to use the button on the card.
 If search_knowledge finds nothing relevant, say you don't know instead of guessing.
+Never mention tool names to the customer.
 When a tool returns an error, explain the reason and any current status it gives.
 The current date and time is {now} in {timezone}.
 The coming days are {coming_days}. Use this list for relative dates: "next Tuesday" or "on Friday"
@@ -124,6 +134,13 @@ def _citations(result: dict[str, Any]) -> list[dict[str, str]]:
     return citations
 
 
+OUT_OF_ROUNDS_PROMPT = """
+You have used all your lookups for this message. Answer now from what you already know."""
+OUT_OF_ROUNDS_REPLY = (
+    "I couldn't finish looking that up. Could you try asking again with a little more detail?"
+)
+
+
 async def _model_turn(
     provider: AgentProvider,
     system_prompt: str,
@@ -137,6 +154,19 @@ async def _model_turn(
     async with aclosing(stream(system_prompt=system_prompt, events=events, tools=tools)) as items:
         async for item in items:
             yield item
+
+
+async def _top_source(
+    session: AsyncSession, context: RequestContext, question: str
+) -> str | None:
+    """Which knowledge section answers this; two answers must share it to be interchangeable."""
+    try:
+        hits = await search_knowledge(session, context, question, limit=1)
+    except Exception as exc:  # A cache check must never cost the customer their answer.
+        logger.warning("Answer cache source check failed: %s", type(exc).__name__)
+        await session.rollback()
+        return None
+    return f"{hits[0].document} > {hits[0].section}" if hits else None
 
 
 async def _save_stopped_reply(
@@ -164,6 +194,7 @@ async def stream_agent(
     content: str,
     provider: AgentProvider,
     max_tool_rounds: int = 5,
+    answer_cache: AnswerCache | None = None,
 ) -> AsyncIterator[dict[str, Any]]:
     """The agent loop: call the model, run the tools it asks for, repeat until it answers.
 
@@ -181,6 +212,21 @@ async def stream_agent(
             .order_by(ChatMessage.created_at, ChatMessage.id)
         )
     )
+    # Only a conversation's first message: a follow-up's meaning depends on what came before it.
+    cache_vector: list[float] | None = None
+    cached = None
+    if answer_cache and not history and is_cacheable_question(content):
+        cache_vector = await asyncio.to_thread(embed_query, content)
+        candidate = await answer_cache.candidate(context.org_id, cache_vector, content)
+        # Only a likely hit pays for this check, that it would come from the same document.
+        if candidate and candidate.source == await _top_source(session, context, content):
+            cached = candidate
+            events_log.info("Answer cache hit at %.3f: no LLM call", cached.similarity)
+        else:
+            events_log.info("Answer cache miss: asking the model")
+    if cached:
+        # Sent before saving, so the customer doesn't wait for the database.
+        yield {"type": "text", "delta": cached.content}
     user_message = ChatMessage(
         conversation_id=conversation_id,
         role=MessageRole.USER,
@@ -190,6 +236,19 @@ async def stream_agent(
     session.add(user_message)
     await session.commit()
     user_message_id = user_message.id
+    if cached:
+        assistant = ChatMessage(
+            conversation_id=conversation_id,
+            role=MessageRole.ASSISTANT,
+            content=cached.content,
+            citations=cached.citations,
+        )
+        conversation.updated_at = datetime.now(UTC)
+        session.add(assistant)
+        await session.commit()
+        await session.refresh(assistant)
+        yield {"type": "done", "message": assistant}
+        return
 
     events = [
         AgentEvent(
@@ -201,6 +260,7 @@ async def stream_agent(
     events.append(AgentEvent(role="user", parts=[{"text": content}]))
     collected_citations: list[dict[str, str]] = []
     proposed_actions: list[uuid.UUID] = []
+    knowledge_only = True
     cards: dict[str, dict[str, Any]] = {}
     partial = ""
     finished = False
@@ -208,10 +268,12 @@ async def stream_agent(
     try:
         for round_number in range(max_tool_rounds + 1):
             # The last round offers no tools, so the model has to answer with what it has.
-            tools = declarations if round_number < max_tool_rounds else []
+            last_round = round_number == max_tool_rounds
+            tools = [] if last_round else declarations
+            prompt = system_prompt + OUT_OF_ROUNDS_PROMPT if last_round else system_prompt
             turn: ProviderTurn | None = None
             partial = ""
-            async with aclosing(_model_turn(provider, system_prompt, events, tools)) as items:
+            async with aclosing(_model_turn(provider, prompt, events, tools)) as items:
                 async for item in items:
                     if isinstance(item, ProviderTurn):
                         turn = item
@@ -221,8 +283,9 @@ async def stream_agent(
 
             if turn is None:
                 raise RuntimeError("The model returned no response")
-            if not turn.tool_calls:
-                if not turn.text:
+            # Models can ask for a tool even when offered none, so the limit is enforced here.
+            if not turn.tool_calls or last_round:
+                if not turn.text and not turn.tool_calls:
                     raise RuntimeError("The model returned neither text nor a tool call")
                 unique_citations = {
                     (citation["document"], citation["section"]): citation
@@ -231,7 +294,7 @@ async def stream_agent(
                 assistant = ChatMessage(
                     conversation_id=conversation_id,
                     role=MessageRole.ASSISTANT,
-                    content=turn.text,
+                    content=turn.text or OUT_OF_ROUNDS_REPLY,
                     citations=list(unique_citations.values()),
                     # A Confirm card is the next step, so lookups made on the way there are noise.
                     cards=[] if proposed_actions else list(cards.values()),
@@ -246,6 +309,19 @@ async def stream_agent(
                         .values(message_id=assistant.id)
                     )
                 await session.commit()
+                # Live data and proposals never go in: prices change and cards belong to one person.
+                if cache_vector and knowledge_only and unique_citations and turn.text:
+                    source = await _top_source(session, context, content)
+                    if source:
+                        await answer_cache.remember(
+                            context.org_id,
+                            cache_vector,
+                            content,
+                            turn.text,
+                            list(unique_citations.values()),
+                            source,
+                        )
+                        events_log.info("Answer cache saved a new answer")
                 await session.refresh(assistant)
                 finished = True
                 yield {"type": "done", "message": assistant}
@@ -262,6 +338,7 @@ async def stream_agent(
                     "label": TOOL_ACTIVITY.get(call.name, "Checking live data…"),
                 }
                 status = "completed"
+                knowledge_only = knowledge_only and call.name == "search_knowledge"
                 try:
                     output, duration_ms = await registry.execute(call.name, call.arguments)
                     # Cards are for the customer: the model and the audit log don't need them.
