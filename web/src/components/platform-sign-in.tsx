@@ -1,12 +1,10 @@
 "use client";
 
 import { FormEvent, useEffect, useState } from "react";
-import Link from "next/link";
 import { useRouter } from "next/navigation";
 
 import { fetchMe } from "@/lib/api";
 import { authClient } from "@/lib/auth-client";
-import { tenants } from "@/lib/tenants";
 
 /** One plain login: the account's stored organization decides where it lands, never this page. */
 export function PlatformSignIn() {
@@ -57,16 +55,6 @@ export function PlatformSignIn() {
           {error && <p className="error" role="alert">{error}</p>}
           <button className="button primary" disabled={pending}>{pending ? "Signing in…" : "Sign in"}</button>
         </form>
-        <p className="alternate">
-          New customer? Create an account with{" "}
-          {tenants.map((tenant, index) => (
-            <span key={tenant.slug}>
-              {index > 0 && " or "}
-              <Link href={`/a/${tenant.slug}/sign-up`}>{tenant.name}</Link>
-            </span>
-          ))}
-          .
-        </p>
       </section>
     </main>
   );

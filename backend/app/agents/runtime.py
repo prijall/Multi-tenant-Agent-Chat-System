@@ -41,6 +41,7 @@ Call search_products first to get the exact SKU. Never guess a SKU.
 A street or area name is a complete delivery address, so don't ask for more detail.
 Totals exclude delivery; the card explains the charge, and the shipping policy has the details.
 For "same as last time", find the newest order with list_my_orders, then call reorder.
+Describe an order's status using its status_meaning. A pending order has already been placed.
 If an item is short, say how many are left and offer one from similar_in_stock by its exact name.
 Only ever name products a tool returned, and never call create_order for a quantity not asked for.
 Knowledge answers must cite the returned document and section.""",

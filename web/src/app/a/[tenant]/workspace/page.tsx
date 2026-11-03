@@ -24,7 +24,10 @@ export default function Workspace() {
 
   async function signOut() {
     await authClient.signOut();
-    router.push("/");
+    // Leaving an organization is an authentication boundary. Reload the document so
+    // the tenant layout, its theme variables, and any authenticated client state are
+    // discarded together instead of surviving a client-side route transition.
+    window.location.replace("/");
   }
 
   if (!tenant) notFound();

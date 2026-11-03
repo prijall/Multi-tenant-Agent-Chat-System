@@ -13,7 +13,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.agents import actions
 from app.agents.cards import bookings_card, order_card, orders_card, slots_card
 from app.core.security import RequestContext
-from app.db.models import Holiday, OpeningHours, Order, Organization, Product
+from app.db.models import Holiday, OpeningHours, Order, OrderStatus, Organization, Product
 from app.db.repositories import list_customer_orders
 from app.services.bookings import available_slots, customer_bookings, list_services
 from app.services.knowledge import search_knowledge
@@ -39,6 +39,19 @@ ORDER_ITEMS = {
 STARTS_AT = {
     "type": "string",
     "description": "The slot's local_start value, an ISO 8601 time with its UTC offset",
+}
+# A bare "pending" reads like an unconfirmed proposal, so the model gets the meaning with it.
+ORDER_STATUS_MEANINGS = {
+    OrderStatus.PENDING.value: (
+        "Placed and already confirmed by the customer, but not shipped yet. "
+        "It needs no Confirm press and can still be changed or cancelled."
+    ),
+    OrderStatus.CONFIRMED.value: (
+        "Accepted by the store and being prepared. It can no longer be changed or cancelled."
+    ),
+    OrderStatus.SHIPPED.value: "On its way. It can no longer be changed or cancelled.",
+    OrderStatus.DELIVERED.value: "Delivered. It can no longer be changed or cancelled.",
+    OrderStatus.CANCELLED.value: "Cancelled. It will not be delivered.",
 }
 
 ToolHandler = Callable[[dict[str, Any]], Awaitable[dict[str, Any]]]
@@ -77,6 +90,10 @@ def _product(row: Product) -> dict[str, Any]:
         "price": str(row.price),
         "stock": row.stock,
     }
+
+
+def _with_status_meaning(detail: dict[str, Any]) -> dict[str, Any]:
+    return {**detail, "status_meaning": ORDER_STATUS_MEANINGS[detail["status"]]}
 
 
 def _local_times_only(rows: list[dict[str, Any]]) -> list[dict[str, Any]]:
@@ -189,14 +206,14 @@ async def registry_for(
             details = [
                 await order_detail(session, context, row.id) for row in rows[:RECENT_ORDERS]
             ]
-            result: dict[str, Any] = {"orders": details}
+            result: dict[str, Any] = {"orders": [_with_status_meaning(row) for row in details]}
             if details:
                 result["card"] = orders_card(details, timezone)
             return result
 
         async def order_status(arguments: dict[str, Any]) -> dict[str, Any]:
             detail = await order_detail(session, context, uuid.UUID(str(arguments["order_id"])))
-            return {**detail, "card": order_card(detail, timezone)}
+            return {**_with_status_meaning(detail), "card": order_card(detail, timezone)}
 
         return slug, TenantToolRegistry(
             [

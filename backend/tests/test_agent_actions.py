@@ -22,7 +22,7 @@ from app.agents.actions import (
     propose_reschedule,
 )
 from app.agents.contracts import AgentEvent, ProviderTurn, ToolCall
-from app.agents.registry import registry_for
+from app.agents.registry import ORDER_STATUS_MEANINGS, registry_for
 from app.agents.runtime import run_agent
 from app.core.security import RequestContext, authenticated_subject
 from app.db.database import get_session
@@ -532,6 +532,31 @@ async def test_lotus_agent_tool_list(session, studio):
         "cancel_booking",
         "list_my_bookings",
     }
+
+
+@pytest.mark.parametrize("tool", ["get_order_status", "list_my_orders"])
+async def test_order_lookups_say_a_pending_order_is_already_placed(session, store, tool):
+    order = Order(
+        org_id=store.context.org_id,
+        customer_id=store.context.user_id,
+        status=OrderStatus.PENDING,
+        total=Decimal("750"),
+        delivery_address=ADDRESS,
+    )
+    session.add(order)
+    await session.commit()
+    _, registry = await registry_for(session, store.context)
+
+    result, _ = await registry.execute(tool, {"order_id": str(order.id)})
+
+    row = result["orders"][0] if tool == "list_my_orders" else result
+    assert row["status"] == "pending"
+    assert "already confirmed" in row["status_meaning"]
+    assert "needs no Confirm press" in row["status_meaning"]
+
+
+def test_every_order_status_has_a_meaning():
+    assert set(ORDER_STATUS_MEANINGS) == {status.value for status in OrderStatus}
 
 
 async def test_model_has_no_tool_that_can_confirm(session, store, studio):
