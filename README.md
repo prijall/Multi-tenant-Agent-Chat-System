@@ -18,11 +18,16 @@ make seed                                  # loads both organisations and their 
 make dev                                   # API on :8000, web on :3000
 ```
 
-On Windows without `make`, run the same steps from each folder:
+On Windows without `make`, install from the repository root, then run each app from a terminal of
+its own:
+
+```powershell
+uv sync
+npm install
+```
 
 ```powershell
 cd backend
-uv sync
 uv run python -m app.scripts.bootstrap_database
 uv run python -m app.scripts.migrate_auth_profile
 uv run python -m app.scripts.seed
@@ -30,8 +35,6 @@ uv run uvicorn app.main:app --reload --port 8000
 ```
 
 ```powershell
-cd web
-npm install
 npm run dev
 ```
 
@@ -69,6 +72,8 @@ Browser (Next.js) ──bearer token──▶ FastAPI ──▶ Agent loop ─�
 ```
 
 ```text
+pyproject.toml      Python dependencies and tool settings, locked by uv.lock
+package.json        npm workspace for web/, locked by package-lock.json
 backend/
   app/
     main.py         App setup

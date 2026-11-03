@@ -3,8 +3,8 @@
 setup: install migrate
 
 install:
-	cd backend && uv sync
-	cd web && npm install
+	uv sync
+	npm install
 
 dev:
 	$(MAKE) -j2 api web
@@ -13,14 +13,14 @@ api:
 	cd backend && uv run uvicorn app.main:app --reload --port 8000
 
 web:
-	cd web && npm run dev
+	npm run dev
 
 test:
-	cd backend && uv run pytest -q
+	uv run pytest -q
 
 lint:
-	cd backend && uv run ruff check .
-	cd web && npm run lint
+	uv run ruff check .
+	npm run lint
 
 migrate:
 	cd backend && uv run python -m app.scripts.bootstrap_database

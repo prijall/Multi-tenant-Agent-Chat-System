@@ -1,0 +1,16 @@
+.git
+.neon
+docs
+**/.venv
+**/node_modules
+**/.next
+**/.env
+**/.env.*
+!**/.env.example
+**/__pycache__
+**/*.pyc
+**/.pytest_cache
+**/.ruff_cache
+**/*.tsbuildinfo
+backend/tests
+backend/evals/results

@@ -15,9 +15,9 @@ RUN uv sync --frozen --no-dev
 # Baked in, so the first question doesn't wait for a download.
 RUN python -c "from fastembed import TextEmbedding; TextEmbedding('BAAI/bge-small-en-v1.5')"
 
-COPY app ./app
-COPY seed ./seed
-COPY evals ./evals
+COPY backend/app ./app
+COPY backend/seed ./seed
+COPY backend/evals ./evals
 
 RUN useradd --create-home app && chown -R app /app
 USER app
