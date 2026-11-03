@@ -26,9 +26,14 @@ def expect(condition: object, reason: str) -> None:
         raise CheckFailed(reason)
 
 
+def _normalized(text: str) -> str:
+    """Models vary between straight and curly apostrophes, and that isn't a change of meaning."""
+    return text.replace("’", "'").lower()
+
+
 def _has_any(text: str, words: tuple[str, ...]) -> bool:
-    lowered = text.lower()
-    return any(word.lower() in lowered for word in words)
+    normalized = _normalized(text)
+    return any(_normalized(word) in normalized for word in words)
 
 
 def reply_mentions(*any_of: str) -> Step:
@@ -43,7 +48,7 @@ def reply_avoids(*words: str) -> Step:
     async def check(world: World) -> None:
         text = world.last_reply.content
         for word in words:
-            expect(word.lower() not in text.lower(), f"Reply leaks {word!r}: {text[:200]!r}")
+            expect(not _has_any(text, (word,)), f"Reply leaks {word!r}: {text[:200]!r}")
 
     return check
 

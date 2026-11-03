@@ -37,8 +37,12 @@ MEANING_WORDS = {
     "more", "move", "no", "not", "opened", "outside", "reschedule", "unopened", "valley",
     "within", "without",
 }  # fmt: skip
-# A shared answer mustn't carry someone's details.
-PERSONAL = re.compile(r"\b(i'm|i am|my name|my order|my booking|my address)\b|@|\d{5,}", re.I)
+# A shared answer mustn't carry someone's details, or stand in for looking up their own records.
+PERSONAL = re.compile(
+    r"\b(i'm|i am|am i|my|mine|did you|have you|the (order|booking|appointment))\b"
+    r"|\b(order|booking)\s*#?\s*\d|@|\d{5,}",
+    re.I,
+)
 
 
 def _words(question: str) -> set[str]:

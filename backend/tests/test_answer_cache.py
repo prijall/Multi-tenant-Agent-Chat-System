@@ -385,6 +385,45 @@ def test_personal_or_multi_part_messages_are_not_cacheable(question):
     assert not is_cacheable_question(question)
 
 
+@pytest.mark.parametrize(
+    "question",
+    [
+        "Have you shipped my order?",
+        "Have you placed my order?",
+        "Is my booking confirmed?",
+        "Has my parcel shipped?",
+        "Where is my tea?",
+        "Has my package arrived?",
+        "Did my purchase go through?",
+        "Did you place the order?",
+        "Have you shipped it?",
+        "Am I booked for tomorrow?",
+        "Was my appointment confirmed?",
+        "Where are my orders?",
+        "What is the status of order 12?",
+        "Is booking #7 still on?",
+    ],
+)
+def test_questions_about_a_customers_own_records_are_not_cacheable(question):
+    assert not is_cacheable_question(question)
+
+
+@pytest.mark.parametrize(
+    "question",
+    [
+        "Can I return opened tea?",
+        "Can opened tea be returned?",
+        "How do I brew green tea?",
+        "What is your cancellation policy?",
+        "Do you ship outside the valley?",
+        "How long does delivery take?",
+        "Can I cancel an order?",
+    ],
+)
+def test_general_questions_stay_cacheable(question):
+    assert is_cacheable_question(question)
+
+
 async def test_redis_being_down_just_means_asking_the_model(session, shop):
     org, user, context = shop
     provider = CountingProvider([knowledge_turn(), ANSWER])

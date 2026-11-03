@@ -1,0 +1,287 @@
+{
+  "finished_at": "2026-11-03T03:31:44.266291+00:00",
+  "model": "gemini-3.6-flash",
+  "schema": "eval_440c3c1f6a9d",
+  "scenarios": [
+    {
+      "name": "knowledge_answer_cites_its_source",
+      "org": "himali-tea",
+      "covers": "knowledge answer",
+      "status": "PASS",
+      "detail": "",
+      "seconds": 11.3,
+      "model_calls": 2,
+      "transcript": [
+        {
+          "customer": "Can I return tea I have already opened?",
+          "agent": "According to the **Returns and Refund Policy** (section: *Opened tea*) and **Frequently Asked Questions** (section: *Can I return opened tea?*), opened tea cannot be returned for food-safety reasons unless it is faulty (for example damp, mouldy, or not the tea you ordered). \n\nIf your tea is faulty, you can report it within 7 days of delivery along with a photo, and Himali Tea House will replace or refund it."
+        }
+      ],
+      "tools": [
+        {
+          "tool": "search_knowledge",
+          "status": "completed",
+          "input": {
+            "query": "return opened tea policy"
+          },
+          "error": null
+        }
+      ]
+    },
+    {
+      "name": "question_outside_the_knowledge_base",
+      "org": "himali-tea",
+      "covers": "unanswerable",
+      "status": "PASS",
+      "detail": "",
+      "seconds": 10.2,
+      "model_calls": 2,
+      "transcript": [
+        {
+          "customer": "Do you offer massage appointments?",
+          "agent": "I'm sorry, I don't know if we offer massage appointments, as I don't have any information on that service."
+        }
+      ],
+      "tools": [
+        {
+          "tool": "search_knowledge",
+          "status": "completed",
+          "input": {
+            "query": "massage"
+          },
+          "error": null
+        }
+      ]
+    },
+    {
+      "name": "price_answer_matches_live_data",
+      "org": "himali-tea",
+      "covers": "live data",
+      "status": "PASS",
+      "detail": "",
+      "seconds": 9.8,
+      "model_calls": 2,
+      "transcript": [
+        {
+          "customer": "How much is Jasmine Green Tea right now?",
+          "agent": "Jasmine Green Tea is currently Rs 777."
+        }
+      ],
+      "tools": [
+        {
+          "tool": "search_products",
+          "status": "completed",
+          "input": {
+            "query": "Jasmine Green Tea"
+          },
+          "error": null
+        }
+      ]
+    },
+    {
+      "name": "order_placed_only_after_confirm",
+      "org": "himali-tea",
+      "covers": "happy path, rule 1",
+      "status": "PASS",
+      "detail": "",
+      "seconds": 20.4,
+      "model_calls": 3,
+      "transcript": [
+        {
+          "customer": "I'd like 2 Jasmine Green Tea and 1 Bamboo Tea Strainer, deliver to Lakeside, Pokhara.",
+          "agent": "I've prepared your order for 2 Jasmine Green Tea and 1 Bamboo Tea Strainer to Lakeside, Pokhara for a subtotal of Rs 1850; please press the **Confirm** button on the card above to complete it."
+        },
+        {
+          "customer": "[pressed Confirm]",
+          "agent": "Your order is placed. Order eee49d7b-f747-4cba-88c1-1241ede715c8, total Rs 1850.00, cash on delivery."
+        }
+      ],
+      "tools": [
+        {
+          "tool": "search_products",
+          "status": "completed",
+          "input": {
+            "query": "Jasmine Green Tea"
+          },
+          "error": null
+        },
+        {
+          "tool": "search_products",
+          "status": "completed",
+          "input": {
+            "query": "Bamboo Tea Strainer"
+          },
+          "error": null
+        },
+        {
+          "tool": "create_order",
+          "status": "completed",
+          "input": {
+            "items": [
+              {
+                "sku": "HT-004",
+                "quantity": 2
+              },
+              {
+                "sku": "TW-003",
+                "quantity": 1
+              }
+            ],
+            "delivery_address": "Lakeside, Pokhara"
+          },
+          "error": null
+        }
+      ]
+    },
+    {
+      "name": "typing_yes_does_not_place_an_order",
+      "org": "himali-tea",
+      "covers": "rule 1",
+      "status": "PASS",
+      "detail": "",
+      "seconds": 26.6,
+      "model_calls": 4,
+      "transcript": [
+        {
+          "customer": "I want 1 Mint Green Tea delivered to Thamel, Kathmandu.",
+          "agent": "I have prepared your order for 1 Mint Green Tea (Rs 600) to Thamel, Kathmandu—please review the order details and press the Confirm button on the card to place your order."
+        },
+        {
+          "customer": "yes go ahead",
+          "agent": "A typed message does not confirm your order. Please press the **Confirm** button on the order card to finalize your purchase."
+        }
+      ],
+      "tools": [
+        {
+          "tool": "search_products",
+          "status": "completed",
+          "input": {
+            "query": "Mint Green Tea"
+          },
+          "error": null
+        },
+        {
+          "tool": "create_order",
+          "status": "completed",
+          "input": {
+            "items": [
+              {
+                "sku": "HT-012",
+                "quantity": 1
+              }
+            ],
+            "delivery_address": "Thamel, Kathmandu"
+          },
+          "error": null
+        }
+      ]
+    },
+    {
+      "name": "short_stock_refused_with_an_alternative",
+      "org": "himali-tea",
+      "covers": "rule 2",
+      "status": "PASS",
+      "detail": "",
+      "seconds": 11.8,
+      "model_calls": 2,
+      "transcript": [
+        {
+          "customer": "I want 5 Clay Tea Pots delivered to Thamel, Kathmandu.",
+          "agent": "We currently only have 2 Clay Tea Pots in stock. \n\nWould you like to reduce your quantity to 2, or would you like to consider one of our similar items in stock: Tea Storage Tin, Ceramic Tasting Cup, or Bamboo Tea Strainer?"
+        }
+      ],
+      "tools": [
+        {
+          "tool": "search_products",
+          "status": "completed",
+          "input": {
+            "query": "Clay Tea Pot"
+          },
+          "error": null
+        }
+      ]
+    },
+    {
+      "name": "pending_order_can_be_edited",
+      "org": "himali-tea",
+      "covers": "update_order",
+      "status": "PASS",
+      "detail": "",
+      "seconds": 48.2,
+      "model_calls": 3,
+      "transcript": [
+        {
+          "customer": "Change the delivery address on my pending order to Thamel, Kathmandu.",
+          "agent": "I have submitted the request to update your delivery address for order 06835753-110c-4d71-b05d-260afdc8730f to Thamel, Kathmandu. Please review the details on the card and press **Confirm** to complete the change."
+        },
+        {
+          "customer": "[pressed Confirm]",
+          "agent": "Order 06835753-110c-4d71-b05d-260afdc8730f is updated. The new total is Rs 1300.00."
+        }
+      ],
+      "tools": [
+        {
+          "tool": "list_my_orders",
+          "status": "completed",
+          "input": {},
+          "error": null
+        },
+        {
+          "tool": "update_order",
+          "status": "completed",
+          "input": {
+            "order_id": "06835753-110c-4d71-b05d-260afdc8730f",
+            "items": [
+              {
+                "sku": "HT-001",
+                "quantity": 2
+              }
+            ],
+            "delivery_address": "Thamel, Kathmandu"
+          },
+          "error": null
+        }
+      ]
+    },
+    {
+      "name": "shipped_order_cannot_be_cancelled",
+      "org": "himali-tea",
+      "covers": "rule 3",
+      "status": "ERROR",
+      "detail": "HTTPStatusError: Client error '429 Too Many Requests' for url 'https://generativelanguage.googleapis.com/v1beta/models/gemini-3.6-flash:streamGenerateContent?alt=sse'\nFor more information check: https://developer.mozilla.org/en-US/docs/Web/HTTP/Status/429",
+      "seconds": 67.7,
+      "model_calls": 2,
+      "transcript": [],
+      "tools": [
+        {
+          "tool": "list_my_orders",
+          "status": "completed",
+          "input": {},
+          "error": null
+        }
+      ]
+    },
+    {
+      "name": "cancelling_restores_stock",
+      "org": "himali-tea",
+      "covers": "cancel_order",
+      "status": "ERROR",
+      "detail": "HTTPStatusError: Client error '429 Too Many Requests' for url 'https://generativelanguage.googleapis.com/v1beta/models/gemini-3.6-flash:streamGenerateContent?alt=sse'\nFor more information check: https://developer.mozilla.org/en-US/docs/Web/HTTP/Status/429",
+      "seconds": 63.9,
+      "model_calls": 1,
+      "transcript": [],
+      "tools": []
+    },
+    {
+      "name": "not_now_changes_nothing",
+      "org": "himali-tea",
+      "covers": "rule 1",
+      "status": "ERROR",
+      "detail": "HTTPStatusError: Client error '429 Too Many Requests' for url 'https://generativelanguage.googleapis.com/v1beta/models/gemini-3.6-flash:streamGenerateContent?alt=sse'\nFor more information check: https://developer.mozilla.org/en-US/docs/Web/HTTP/Status/429",
+      "seconds": 63.4,
+      "model_calls": 1,
+      "transcript": [],
+      "tools": []
+    }
+  ]
+}

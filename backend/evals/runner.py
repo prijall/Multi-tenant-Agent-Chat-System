@@ -7,6 +7,7 @@ agent did the wrong thing; ERROR means the run couldn't finish, such as an outag
 import argparse
 import asyncio
 import json
+import re
 import sys
 from collections import Counter
 from datetime import UTC, datetime
@@ -17,7 +18,7 @@ from app.core.config import get_settings
 from evals.harness import EvalDatabase, PacedProvider, Result, run_scenario
 from evals.scenarios import ALL_SCENARIOS, HIMALI, LOTUS
 
-RESULTS_FILE = Path(__file__).resolve().parent / "results" / "latest.json"
+RESULTS_DIR = Path(__file__).resolve().parent / "results"
 # Gemini's free tier allows 15 requests a minute.
 DEFAULT_SECONDS_PER_CALL = 4.2
 # Several outages in a row mean the provider is down or throttling; carrying on would only wait.
@@ -35,19 +36,35 @@ def print_summary(results: list[Result], model: str, model_calls: int) -> None:
             f"{label}: {counts['PASS']}/{len(scoped)} passed, "
             f"{counts['FAIL']} failed, {counts['ERROR']} could not finish"
         )
-    print(f"Model: {model} | Model calls: {model_calls} | Details: {RESULTS_FILE}")
+    print(f"Model: {model} | Model calls: {model_calls} | Details: {results_file(model)}")
 
 
-def finished_results() -> dict[tuple[str, str], dict]:
+def results_file(model: str) -> Path:
+    """One file per model, so trying another model never overwrites or mixes with these results."""
+    return RESULTS_DIR / f"{re.sub(r'[^A-Za-z0-9._-]', '_', model)}.json"
+
+
+def finished_results(model: str) -> dict[tuple[str, str], dict]:
     """Scenarios a previous run did get an answer for, so a retry only spends quota on the rest."""
-    if not RESULTS_FILE.exists():
+    path = results_file(model)
+    if not path.exists():
         return {}
-    earlier = json.loads(RESULTS_FILE.read_text(encoding="utf-8"))["scenarios"]
+    earlier = json.loads(path.read_text(encoding="utf-8"))["scenarios"]
     return {(item["org"], item["name"]): item for item in earlier if item["status"] != "ERROR"}
 
 
+def keep_earlier(
+    selected: list, earlier: dict[tuple[str, str], dict], unfinished: bool
+) -> dict[tuple[str, str], dict]:
+    """Rerunning some scenarios replaces only those, so --only can't wipe the rest of a run."""
+    if unfinished:
+        return earlier
+    rerun = {(scenario.org, scenario.name) for scenario in selected}
+    return {key: item for key, item in earlier.items() if key not in rerun}
+
+
 def save(results: list[Result], kept: dict[tuple[str, str], dict], model: str, schema: str) -> None:
-    RESULTS_FILE.parent.mkdir(exist_ok=True)
+    RESULTS_DIR.mkdir(exist_ok=True)
     new = {(result.scenario.org, result.scenario.name): result.as_dict() for result in results}
     merged = {**kept, **new}
     ordered = [
@@ -55,7 +72,7 @@ def save(results: list[Result], kept: dict[tuple[str, str], dict], model: str, s
         for scenario in ALL_SCENARIOS
         if (scenario.org, scenario.name) in merged
     ]
-    RESULTS_FILE.write_text(
+    results_file(model).write_text(
         json.dumps(
             {
                 "finished_at": datetime.now(UTC).isoformat(),
@@ -86,7 +103,7 @@ async def run(arguments: argparse.Namespace) -> int:
         if (not arguments.only or arguments.only in scenario.name)
         and (not arguments.org or scenario.org == arguments.org)
     ]
-    kept = finished_results() if arguments.unfinished else {}
+    kept = keep_earlier(scenarios, finished_results(provider.model), arguments.unfinished)
     scenarios = [scenario for scenario in scenarios if (scenario.org, scenario.name) not in kept]
     paced = PacedProvider(provider, arguments.seconds_per_call)
     database = EvalDatabase(settings.migration_database_url)

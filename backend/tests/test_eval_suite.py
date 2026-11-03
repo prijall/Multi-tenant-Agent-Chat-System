@@ -2,9 +2,44 @@ from dataclasses import dataclass, field
 
 import pytest
 
+from evals import runner
 from evals.checks import orders_are, reply_avoids, reply_mentions
 from evals.harness import RESEEDED_TABLES, CheckFailed, PacedProvider
 from evals.scenarios import ALL_SCENARIOS, HIMALI, LOTUS
+
+
+def test_each_model_keeps_its_own_results(tmp_path, monkeypatch):
+    monkeypatch.setattr(runner, "RESULTS_DIR", tmp_path)
+
+    runner.save([], {}, "models/first", "schema")
+    first = runner.results_file("models/first").read_text(encoding="utf-8")
+    runner.save([], {}, "second", "schema")
+
+    assert runner.results_file("models/first").read_text(encoding="utf-8") == first
+    assert runner.results_file("models/first").parent == tmp_path
+    assert runner.results_file("second").exists()
+    assert runner.finished_results("never-run") == {}
+
+
+def test_rerunning_some_scenarios_keeps_the_rest():
+    first, second = ALL_SCENARIOS[:2]
+    earlier = {
+        (first.org, first.name): {"status": "FAIL"},
+        (second.org, second.name): {"status": "PASS"},
+    }
+
+    assert runner.keep_earlier([first], earlier, unfinished=False) == {
+        (second.org, second.name): {"status": "PASS"}
+    }
+    assert runner.keep_earlier([first], earlier, unfinished=True) == earlier
+    assert runner.keep_earlier([first, second], earlier, unfinished=False) == {}
+
+
+async def test_checks_treat_curly_and_straight_apostrophes_alike():
+    await reply_mentions("don't")(FakeWorld(reply="I don’t know"))
+    await reply_mentions("don’t")(FakeWorld(reply="I don't know"))
+    with pytest.raises(CheckFailed, match="leaks"):
+        await reply_avoids("can't")(FakeWorld(reply="We can’t"))
 
 
 @pytest.mark.parametrize("org", [HIMALI, LOTUS])
